@@ -21,6 +21,7 @@ pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 #[entry]
 fn main() -> ! {
+    // Boilerplate
     let mut pac = pac::Peripherals::take().unwrap();
     let core = pac::CorePeripherals::take().unwrap();
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
@@ -52,8 +53,8 @@ fn main() -> ! {
 
     loop {
         led_pin.set_high().unwrap();
-        delay.delay_ms(500);
+        delay.delay_ms(200);
         led_pin.set_low().unwrap();
-        delay.delay_ms(500);
+        delay.delay_ms(200);
     }
 }
