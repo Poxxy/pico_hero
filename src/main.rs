@@ -51,20 +51,25 @@ fn main() -> ! {
 
     let mut led_pin = pins.gpio25.into_push_pull_output();
 
-    let pin16 = pins.gpio16.into_pull_up_input();
+    let pin16 = pins.gpio16.into_pull_down_input();
 
-    let mut delay_in_ms;
+    let mut pin15 = pins.gpio15.into_push_pull_output();
+
+    let mut pin15_high = false;
 
     loop {
+        // Listen on pin16 and if a high signal is detected, flip the state of pin15
         if pin16.is_high().unwrap() {
-            delay_in_ms = 200;
-        } else {
-            delay_in_ms = 2000;
+            pin15_high = !pin15_high;
+            match pin15_high {
+                true => pin15.set_high().unwrap(),
+                false => pin15.set_low().unwrap(),
+            }
         }
 
         led_pin.set_high().unwrap();
-        delay.delay_ms(delay_in_ms);
+        delay.delay_ms(500);
         led_pin.set_low().unwrap();
-        delay.delay_ms(delay_in_ms);
+        delay.delay_ms(500);
     }
 }
