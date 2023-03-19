@@ -3,7 +3,7 @@
 
 use cortex_m_rt::entry;
 use defmt_rtt as _;
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::digital::v2::{InputPin, OutputPin};
 use embedded_time::fixed_point::FixedPoint;
 use panic_probe as _;
 use rp2040_hal as hal;
@@ -51,10 +51,20 @@ fn main() -> ! {
 
     let mut led_pin = pins.gpio25.into_push_pull_output();
 
+    let pin16 = pins.gpio16.into_pull_up_input();
+
+    let mut delay_in_ms;
+
     loop {
+        if pin16.is_high().unwrap() {
+            delay_in_ms = 200;
+        } else {
+            delay_in_ms = 2000;
+        }
+
         led_pin.set_high().unwrap();
-        delay.delay_ms(200);
+        delay.delay_ms(delay_in_ms);
         led_pin.set_low().unwrap();
-        delay.delay_ms(200);
+        delay.delay_ms(delay_in_ms);
     }
 }
