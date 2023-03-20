@@ -10,6 +10,7 @@ use rp2040_hal as hal;
 
 use hal::{
     clocks::{init_clocks_and_plls, Clock},
+    gpio::{AnyPin, PullUp, PushPull},
     pac,
     watchdog::Watchdog,
     Sio,
@@ -49,27 +50,66 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
+    // Used for blinky, always running.
     let mut led_pin = pins.gpio25.into_push_pull_output();
 
-    let pin16 = pins.gpio16.into_pull_down_input();
+    // Used to trigger alarm.
+    let mut pin16 = pins.gpio16.into_push_pull_output();
 
-    let mut pin15 = pins.gpio15.into_push_pull_output();
+    // Used for adding 5 seconds
+    let pin14 = pins.gpio14.into_pull_up_input();
 
-    let mut pin15_high = false;
+    // Used for adding 1 minute
+    let pin15 = pins.gpio15.into_pull_up_input();
+
+    let mut countdown_in_ms = 10_000;
 
     loop {
-        // Listen on pin16 and if a high signal is detected, flip the state of pin15
-        if pin16.is_high().unwrap() {
-            pin15_high = !pin15_high;
-            match pin15_high {
-                true => pin15.set_high().unwrap(),
-                false => pin15.set_low().unwrap(),
-            }
+        if countdown_in_ms < 0 {
+            alarm(&mut pin16, &mut delay);
+            countdown_in_ms = 10_000;
         }
 
-        led_pin.set_high().unwrap();
-        delay.delay_ms(500);
-        led_pin.set_low().unwrap();
-        delay.delay_ms(500);
+        blinky(&mut led_pin, &mut delay);
+
+        countdown_in_ms -= 1_000;
+
+        countdown_in_ms += add_time(&pin14, &pin15);
+    }
+}
+
+fn blinky(
+    led_pin: &mut hal::gpio::Pin<hal::gpio::bank0::Gpio25, hal::gpio::Output<PushPull>>,
+    delay: &mut cortex_m::delay::Delay,
+) {
+    led_pin.set_high().unwrap();
+    delay.delay_ms(500);
+    led_pin.set_low().unwrap();
+    delay.delay_ms(500);
+}
+
+fn add_time(
+    pin14: &hal::gpio::Pin<hal::gpio::bank0::Gpio14, hal::gpio::Input<PullUp>>,
+    pin15: &hal::gpio::Pin<hal::gpio::bank0::Gpio15, hal::gpio::Input<PullUp>>,
+) -> i32 {
+    match (pin14.is_high().unwrap(), pin15.is_high().unwrap()) {
+        (true, true) => return 65,
+        (true, false) => return 5,
+        (false, true) => return 60,
+        (false, false) => return 0,
+    }
+}
+
+fn alarm(
+    pin16: &mut hal::gpio::Pin<hal::gpio::bank0::Gpio16, hal::gpio::Output<PushPull>>,
+    delay: &mut cortex_m::delay::Delay,
+) {
+    let mut i = 0;
+    while i < 100 {
+        pin16.set_high().unwrap();
+        delay.delay_ms(20);
+        pin16.set_low().unwrap();
+        delay.delay_ms(20);
+        i += 1;
     }
 }
