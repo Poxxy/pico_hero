@@ -62,22 +62,36 @@ fn main() -> ! {
     // Used for adding 1 minute
     let pin15 = pins.gpio15.into_pull_up_input();
 
+    // Used for pausing timer.
+    let pin0 = pins.gpio0.into_pull_up_input();
+    let mut on: bool = false;
+
     let mut countdown_in_ms = 10_000;
 
     loop {
-        if countdown_in_ms < 0 {
-            alarm(&mut pin16, &mut delay);
-            countdown_in_ms = 10_000;
+        if switch(&pin0) {
+            on = !on;
         }
 
-        blinky(&mut led_pin, &mut delay);
+        if on {
+            if countdown_in_ms < 0 {
+                alarm(&mut pin16, &mut delay);
+                countdown_in_ms = 10_000;
+            }
+            countdown_in_ms -= 1_000;
 
-        countdown_in_ms -= 1_000;
-
+            blinky(&mut led_pin, &mut delay);
+        }
         countdown_in_ms += add_time(&pin14, &pin15);
     }
 }
 
+/// On/Off switch, whether alarm should be counting down.
+fn switch(pin0: &hal::gpio::Pin<hal::gpio::bank0::Gpio0, hal::gpio::Input<PullUp>>) -> bool {
+    pin0.is_high().unwrap()
+}
+
+/// Blink every second to help count timer.
 fn blinky(
     led_pin: &mut hal::gpio::Pin<hal::gpio::bank0::Gpio25, hal::gpio::Output<PushPull>>,
     delay: &mut cortex_m::delay::Delay,
@@ -88,6 +102,9 @@ fn blinky(
     delay.delay_ms(500);
 }
 
+/// Takes two arguments: pin14 representing seconds, pin15 representing minutes
+/// If pin14 turns high, add 5 seconds.
+/// If pin15 turns high, add 60 seconds.
 fn add_time(
     pin14: &hal::gpio::Pin<hal::gpio::bank0::Gpio14, hal::gpio::Input<PullUp>>,
     pin15: &hal::gpio::Pin<hal::gpio::bank0::Gpio15, hal::gpio::Input<PullUp>>,
@@ -100,6 +117,8 @@ fn add_time(
     }
 }
 
+/// Actual alarm code. Can modify how long the alarm goes off for and
+/// how often the noise plays. 20-100ms seems right for sound
 fn alarm(
     pin16: &mut hal::gpio::Pin<hal::gpio::bank0::Gpio16, hal::gpio::Output<PushPull>>,
     delay: &mut cortex_m::delay::Delay,
