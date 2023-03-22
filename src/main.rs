@@ -5,6 +5,8 @@ use cortex_m_rt::entry;
 use defmt_rtt as _;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use embedded_time::fixed_point::FixedPoint;
+mod oled;
+use oled::OLED;
 use panic_probe as _;
 use rp2040_hal as hal;
 
@@ -53,42 +55,15 @@ fn main() -> ! {
     // Used for blinky, always running.
     let mut led_pin = pins.gpio25.into_push_pull_output();
 
-    // Used to trigger alarm.
-    let mut pin16 = pins.gpio16.into_push_pull_output();
+    // Used for OLED.
+    let mut sda = pins.gpio0.into_push_pull_output();
+    let mut scl = pins.gpio1.into_push_pull_output();
 
-    // Used for adding 5 seconds
-    let pin14 = pins.gpio14.into_pull_up_input();
-
-    // Used for adding 1 minute
-    let pin15 = pins.gpio15.into_pull_up_input();
-
-    // Used for pausing timer.
-    let pin0 = pins.gpio0.into_pull_up_input();
-    let mut on: bool = false;
-
-    let mut countdown_in_ms = 10_000;
+    let oled = OLED::new(sda, scl);
 
     loop {
-        if switch(&pin0) {
-            on = !on;
-        }
-
-        if on {
-            if countdown_in_ms < 0 {
-                alarm(&mut pin16, &mut delay);
-                countdown_in_ms = 10_000;
-            }
-            countdown_in_ms -= 1_000;
-
-            blinky(&mut led_pin, &mut delay);
-        }
-        countdown_in_ms += add_time(&pin14, &pin15);
+        blinky(&mut led_pin, &mut delay);
     }
-}
-
-/// On/Off switch, whether alarm should be counting down.
-fn switch(pin0: &hal::gpio::Pin<hal::gpio::bank0::Gpio0, hal::gpio::Input<PullUp>>) -> bool {
-    pin0.is_high().unwrap()
 }
 
 /// Blink every second to help count timer.
@@ -100,35 +75,4 @@ fn blinky(
     delay.delay_ms(500);
     led_pin.set_low().unwrap();
     delay.delay_ms(500);
-}
-
-/// Takes two arguments: pin14 representing seconds, pin15 representing minutes
-/// If pin14 turns high, add 5 seconds.
-/// If pin15 turns high, add 60 seconds.
-fn add_time(
-    pin14: &hal::gpio::Pin<hal::gpio::bank0::Gpio14, hal::gpio::Input<PullUp>>,
-    pin15: &hal::gpio::Pin<hal::gpio::bank0::Gpio15, hal::gpio::Input<PullUp>>,
-) -> i32 {
-    match (pin14.is_high().unwrap(), pin15.is_high().unwrap()) {
-        (true, true) => return 65,
-        (true, false) => return 5,
-        (false, true) => return 60,
-        (false, false) => return 0,
-    }
-}
-
-/// Actual alarm code. Can modify how long the alarm goes off for and
-/// how often the noise plays. 20-100ms seems right for sound
-fn alarm(
-    pin16: &mut hal::gpio::Pin<hal::gpio::bank0::Gpio16, hal::gpio::Output<PushPull>>,
-    delay: &mut cortex_m::delay::Delay,
-) {
-    let mut i = 0;
-    while i < 100 {
-        pin16.set_high().unwrap();
-        delay.delay_ms(20);
-        pin16.set_low().unwrap();
-        delay.delay_ms(20);
-        i += 1;
-    }
 }
