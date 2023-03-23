@@ -1,3 +1,4 @@
+use embedded_hal::digital::v2::OutputPin;
 use rp2040_hal::gpio::{
     bank0::{Gpio0, Gpio1},
     pin, Output, Pin, PushPull,
@@ -27,5 +28,12 @@ impl<'a> OLED<'a> {
 
     pub fn update_text(&mut self, message: &'a str) {
         self.text = message;
+    }
+
+    pub fn display(&mut self) {
+        for c in self.text.chars() {
+            self.sda.set_high().unwrap();
+            self.scl.set_high().unwrap();
+        }
     }
 }

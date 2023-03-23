@@ -59,10 +59,11 @@ fn main() -> ! {
     let mut sda = pins.gpio0.into_push_pull_output();
     let mut scl = pins.gpio1.into_push_pull_output();
 
-    let oled = OLED::new(sda, scl);
+    let mut oled = OLED::new(sda, scl);
 
     loop {
         blinky(&mut led_pin, &mut delay);
+        oled.display();
     }
 }
 
