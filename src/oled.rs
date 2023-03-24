@@ -1,8 +1,12 @@
+use embedded_hal::blocking::i2c;
 use embedded_hal::digital::v2::OutputPin;
 use rp2040_hal::gpio::{
     bank0::{Gpio0, Gpio1},
     pin, Output, Pin, PushPull,
 };
+
+use core::fmt::Write;
+use ssd1306::{mode::TerminalMode, prelude::*, I2CDisplayInterface, Ssd1306};
 
 pub struct OLED<'a> {
     // Dimensions of OLED
@@ -30,10 +34,16 @@ impl<'a> OLED<'a> {
         self.text = message;
     }
 
-    pub fn display(&mut self) {
-        for c in self.text.chars() {
-            self.sda.set_high().unwrap();
-            self.scl.set_high().unwrap();
-        }
+    pub fn display_text(&mut self) {
+        let i2c_component = i2c;
+        let interface = I2CDisplayInterface::new(i2c_component);
+
+        let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
+            .into_terminal_mode();
+        display.init().unwrap();
+        display.clear().unwrap();
+
+        // The `write!()` macro is also supported
+        write!(display, "{}", self.text);
     }
 }

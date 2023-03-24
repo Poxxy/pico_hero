@@ -6,7 +6,6 @@ use defmt_rtt as _;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use embedded_time::fixed_point::FixedPoint;
 mod oled;
-use oled::OLED;
 use panic_probe as _;
 use rp2040_hal as hal;
 
@@ -59,7 +58,7 @@ fn main() -> ! {
     let mut sda = pins.gpio0.into_push_pull_output();
     let mut scl = pins.gpio1.into_push_pull_output();
 
-    let mut oled = OLED::new(sda, scl);
+    let mut oled = oled::OLED::new(sda, scl);
 
     loop {
         blinky(&mut led_pin, &mut delay);
