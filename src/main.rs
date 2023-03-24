@@ -3,18 +3,24 @@
 
 use cortex_m_rt::entry;
 use defmt_rtt as _;
-use embedded_hal::digital::v2::{InputPin, OutputPin};
+use embedded_hal::digital::v2::OutputPin;
 use embedded_time::fixed_point::FixedPoint;
-mod oled;
+use embedded_time::rate::*;
 use panic_probe as _;
 use rp2040_hal as hal;
 
+use core::fmt::Write;
+
 use hal::{
     clocks::{init_clocks_and_plls, Clock},
-    gpio::{AnyPin, PullUp, PushPull},
+    gpio::PushPull,
     pac,
     watchdog::Watchdog,
     Sio,
+};
+use ssd1306::{
+    prelude::DisplayConfig, rotation::DisplayRotation, size::DisplaySize128x64,
+    I2CDisplayInterface, Ssd1306,
 };
 
 #[link_section = ".boot2"]
@@ -54,15 +60,30 @@ fn main() -> ! {
     // Used for blinky, always running.
     let mut led_pin = pins.gpio25.into_push_pull_output();
 
-    // Used for OLED.
-    let mut sda = pins.gpio0.into_push_pull_output();
-    let mut scl = pins.gpio1.into_push_pull_output();
+    // hal refers to rp_pico::hal
+    let sda_pin = pins.gpio16.into_mode::<hal::gpio::FunctionI2C>();
+    let scl_pin = pins.gpio17.into_mode::<hal::gpio::FunctionI2C>();
 
-    let mut oled = oled::OLED::new(sda, scl);
+    let i2c = hal::I2C::i2c0(
+        pac.I2C0,
+        sda_pin,
+        scl_pin,
+        40_u32.kHz(),
+        &mut pac.RESETS,
+        clocks.peripheral_clock,
+    );
+
+    let interface = I2CDisplayInterface::new(i2c);
+
+    let mut display =
+        Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0).into_terminal_mode();
+    display.init().unwrap();
+    display.clear().unwrap();
+
+    write!(display, "{}", "Hello World!").unwrap();
 
     loop {
         blinky(&mut led_pin, &mut delay);
-        oled.display();
     }
 }
 
