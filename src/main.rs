@@ -3,7 +3,7 @@
 
 use cortex_m_rt::entry;
 use defmt_rtt as _;
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::digital::v2::{InputPin, OutputPin};
 use embedded_time::fixed_point::FixedPoint;
 use embedded_time::rate::*;
 use panic_probe as _;
@@ -80,10 +80,28 @@ fn main() -> ! {
     display.init().unwrap();
     display.clear().unwrap();
 
-    write!(display, "{}", "Hello World!").unwrap();
+    // Switch between modes.
+    let switch_pin = pins.gpio0.into_pull_up_input();
+
+    // Timer
+    let mut time_since_up = 1;
+
+    // Timer Mode or Text Mode
+    let mut timer_mode = false;
 
     loop {
+        if switch_pin.is_high().unwrap() {
+            timer_mode = !timer_mode;
+        }
+
+        if timer_mode {
+            write!(display, "Timer: {}", time_since_up).unwrap();
+        } else {
+            write!(display, "{}", "Hello World!").unwrap();
+        }
+
         blinky(&mut led_pin, &mut delay);
+        time_since_up += 1;
     }
 }
 
