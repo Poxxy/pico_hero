@@ -13,7 +13,7 @@ use core::fmt::Write;
 
 use hal::{
     clocks::{init_clocks_and_plls, Clock},
-    gpio::PushPull,
+    gpio::{PullUp, PushPull},
     pac,
     watchdog::Watchdog,
     Sio,
@@ -89,7 +89,13 @@ fn main() -> ! {
     // Timer Mode or Text Mode
     let mut timer_mode = false;
 
+    // Alarm System
+    let trigger_pin = pins.gpio1.into_pull_up_input();
+    let mut alarm_pin = pins.gpio2.into_push_pull_output();
+
     loop {
+        trigger_alarm(&trigger_pin, &mut alarm_pin, &mut delay);
+
         if switch_pin.is_high().unwrap() {
             timer_mode = !timer_mode;
         }
@@ -114,4 +120,19 @@ fn blinky(
     delay.delay_ms(500);
     led_pin.set_low().unwrap();
     delay.delay_ms(500);
+}
+
+fn trigger_alarm(
+    trigger_pin: &hal::gpio::Pin<hal::gpio::bank0::Gpio1, hal::gpio::Input<PullUp>>,
+    alarm_pin: &mut hal::gpio::Pin<hal::gpio::bank0::Gpio2, hal::gpio::Output<PushPull>>,
+    delay: &mut cortex_m::delay::Delay,
+) {
+    if trigger_pin.is_high().unwrap() {
+        for _ in 0..=10 {
+            alarm_pin.set_high().unwrap();
+            delay.delay_ms(100);
+            alarm_pin.set_low().unwrap();
+            delay.delay_ms(100);
+        }
+    }
 }
