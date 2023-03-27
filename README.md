@@ -16,5 +16,5 @@
 
 ## Notes
 
-Text can be changed with the write macro.
-Alarm functionality can be modified to be longer/shorter or faster/slower.
+* Text can be changed with the write macro.
+* Alarm functionality can be modified to be longer/shorter or faster/slower.
